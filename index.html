@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Been Here</title>
+<meta name="description" content="Clear the fog on the world map everywhere you go.">
+<meta name="theme-color" content="#0d1528">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Been Here">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="js/lib/leaflet.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5L9 4Z"/><path d="M9 4v13.5M15 6.5V20"/></symbol>
+    <symbol id="i-place" viewBox="0 0 24 24"><path d="M4.5 8.5 10 4.5l8.5 2.5 1 8-6.5 4.5-7.5-3.5-1-7.5Z"/><circle cx="12" cy="11.5" r="2.2"/></symbol>
+    <symbol id="i-stats" viewBox="0 0 24 24"><path d="M5 20v-8M12 20V5M19 20v-5"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></symbol>
+    <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.4" class="fillme"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3.5 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3.5V15M7.5 8 12 3.5 16.5 8"/><path d="M5 12.5V20h14v-7.5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  </defs>
+</svg>
+
+<div id="map"></div>
+
+<div class="top" id="top">
+  <button class="pill glass" id="statPill" aria-label="Open stats">
+    <span class="pill-main" id="pillPct">0%</span>
+    <span class="pill-sub" id="pillSub">of the world explored</span>
+  </button>
+  <div class="top-actions">
+    <button class="fab glass" id="layersBtn" aria-label="Map and fog style"><svg><use href="#i-layers"/></svg></button>
+    <button class="fab glass" id="shareBtn" aria-label="Share a picture of your map"><svg><use href="#i-share"/></svg></button>
+  </div>
+</div>
+
+<div class="area-chip glass" id="areaChip" hidden>
+  <span id="areaChipText"></span>
+  <button id="areaChipClose" aria-label="Hide area outline"><svg><use href="#i-close"/></svg></button>
+</div>
+
+<div class="popover glass" id="layersPop" hidden>
+  <div class="pop-title">Map</div>
+  <div class="seg" data-setting="mapStyle">
+    <button data-v="streets">Streets</button>
+    <button data-v="satellite">Satellite</button>
+    <button data-v="dark">Dark</button>
+    <button data-v="light">Light</button>
+  </div>
+  <div class="pop-title">Fog</div>
+  <div class="seg" data-setting="fog">
+    <button data-v="night">Night</button>
+    <button data-v="cloud">Cloud</button>
+    <button data-v="paper">Paper</button>
+  </div>
+  <label class="slider-row"><span>Thickness</span><input type="range" id="fogDensity" min="0.5" max="1" step="0.02"></label>
+  <label class="switch-row"><span>Tint visited countries</span><input type="checkbox" id="showCountries" class="switch"></label>
+</div>
+
+<div class="side" id="side">
+  <button class="fab glass" id="editBtn" aria-label="Draw past trips"><svg><use href="#i-pencil"/></svg></button>
+  <button class="fab glass" id="locateBtn" aria-label="Show my location"><svg><use href="#i-locate"/></svg></button>
+</div>
+
+<div class="dock" id="dock">
+  <button id="recBtn" class="rec glass" aria-pressed="false">
+    <span class="rec-dot"></span>
+    <span class="rec-text"><b id="recLabel">Start recording</b><small id="recSub">Clears the fog as you move</small></span>
+  </button>
+</div>
+
+<div class="editbar glass" id="editBar" hidden>
+  <div class="seg small" id="editMode">
+    <button data-v="draw" class="on">Draw</button>
+    <button data-v="erase">Erase</button>
+  </div>
+  <div class="seg small" id="brushSize">
+    <button data-v="s">S</button>
+    <button data-v="m">M</button>
+    <button data-v="l">L</button>
+  </div>
+  <button class="icon-btn" id="undoBtn" aria-label="Undo"><svg><use href="#i-undo"/></svg></button>
+  <button class="done-btn" id="editDone">Done</button>
+</div>
+
+<section class="panel" id="panel-areas" hidden>
+  <header class="panel-head"><h1>Places</h1></header>
+  <div class="panel-body">
+    <div class="card">
+      <div class="card-title">Explored around <span id="nearWhere">you</span></div>
+      <div class="near-grid">
+        <div><b id="near1">-</b><small>within 1 km</small></div>
+        <div><b id="near5">-</b><small>within 5 km</small></div>
+        <div><b id="near25">-</b><small>within 25 km</small></div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>Areas here</h2>
+      <button class="btn small" id="lookupBtn">Look up</button>
+    </div>
+    <div class="seg small wide" id="lookupFrom">
+      <button data-v="me" class="on">My location</button>
+      <button data-v="map">Map centre</button>
+    </div>
+    <div id="lookupList" class="list">
+      <p class="muted">Tap Look up to see the neighbourhood, district, city and region you are in, and how much of each you have explored.</p>
+    </div>
+
+    <div class="section-head"><h2>Saved areas</h2></div>
+    <div id="savedList" class="list"></div>
+    <p class="muted tiny">Area outlines come from OpenStreetMap. Looking them up needs an internet connection.</p>
+  </div>
+</section>
+
+<section class="panel" id="panel-stats" hidden>
+  <header class="panel-head">
+    <h1>Stats</h1>
+    <button class="btn small" id="statsShare"><svg><use href="#i-share"/></svg>Share</button>
+  </header>
+  <div class="panel-body" id="statsBody"></div>
+</section>
+
+<section class="panel" id="panel-settings" hidden>
+  <header class="panel-head"><h1>Settings</h1></header>
+  <div class="panel-body">
+    <div class="card install" id="installCard" hidden>
+      <div class="card-title">Add Been Here to your Home Screen</div>
+      <ol class="steps">
+        <li>Tap the Share button at the bottom of Safari.</li>
+        <li>Scroll down and tap Add to Home Screen.</li>
+        <li>Open Been Here from your Home Screen. It works offline from then on.</li>
+      </ol>
+    </div>
+
+    <h2 class="group">Recording</h2>
+    <div class="card">
+      <label class="switch-row"><span>Keep the screen on while recording</span><input type="checkbox" id="keepAwake" class="switch"></label>
+      <div class="field">
+        <div class="field-label">GPS accuracy needed</div>
+        <div class="seg small wide" data-setting="accuracy">
+          <button data-v="25">Strict</button>
+          <button data-v="60">Normal</button>
+          <button data-v="120">Loose</button>
+        </div>
+      </div>
+      <p class="muted small">iPhone pauses web apps when you switch away or lock the screen, so Been Here only records while it is open. To fill in the gaps, turn on Timeline in Google Maps and import it below now and then.</p>
+    </div>
+
+    <h2 class="group">Import past trips</h2>
+    <div class="card">
+      <div class="btn-row">
+        <label class="btn">Import files<input type="file" id="importFiles" multiple hidden></label>
+        <label class="btn">Import photos<input type="file" id="importPhotos" accept="image/*" multiple hidden></label>
+      </div>
+      <p class="muted small">Files can be GPX or KML tracks, GeoJSON, a Google Maps Timeline export, or a Been Here backup. Photos clear the fog where they were taken.</p>
+      <details>
+        <summary>Export your Google Maps Timeline</summary>
+        <ol class="steps">
+          <li>In Google Maps, tap your profile picture, then Settings.</li>
+          <li>Tap Personal content, then Export Timeline data.</li>
+          <li>Save the file to Files, then tap Import files here and pick it.</li>
+        </ol>
+      </details>
+      <details>
+        <summary>Photos come in without a location</summary>
+        <p class="muted small">Your iPhone can remove the location when you pick photos in a web app. Save the photos to the Files app first, then use Import files and pick them from there.</p>
+      </details>
+      <div class="import-status muted small" id="importStatus"></div>
+    </div>
+
+    <h2 class="group">Backup</h2>
+    <div class="card">
+      <p class="small" id="backupInfo">You have not saved a backup yet.</p>
+      <div class="btn-row"><button class="btn" id="backupBtn">Save a backup</button></div>
+      <p class="muted small">Your map is stored only on this iPhone. Save a backup to Files or iCloud Drive now and then. To restore, use Import files and pick the backup.</p>
+    </div>
+
+    <h2 class="group">Your data</h2>
+    <div class="card">
+      <p class="small" id="dataInfo"></p>
+      <div class="btn-row"><button class="btn danger" id="eraseBtn">Erase everything</button></div>
+    </div>
+
+    <p class="muted tiny credits">Map tiles by Esri. Country shapes from Natural Earth. Towns and cities from GeoNames. Area outlines from OpenStreetMap contributors via Nominatim.</p>
+  </div>
+</section>
+
+<nav class="tabbar glass" id="tabbar">
+  <button data-tab="map" class="on"><svg><use href="#i-map"/></svg><span>Map</span></button>
+  <button data-tab="areas"><svg><use href="#i-place"/></svg><span>Places</span></button>
+  <button data-tab="stats"><svg><use href="#i-stats"/></svg><span>Stats</span></button>
+  <button data-tab="settings"><svg><use href="#i-settings"/></svg><span>Settings</span></button>
+</nav>
+
+<div class="sheet-back" id="sheetBack" hidden></div>
+<div class="sheet" id="countrySheet" hidden>
+  <div class="sheet-head">
+    <h2>Countries you have been to</h2>
+    <button class="icon-btn" id="countrySheetClose" aria-label="Close"><svg><use href="#i-close"/></svg></button>
+  </div>
+  <input type="search" id="countrySearch" placeholder="Search countries" autocomplete="off">
+  <p class="muted small">Tick places you went before you started using Been Here. Places with cleared fog are ticked for you.</p>
+  <div id="countryList" class="country-list"></div>
+</div>
+
+<div class="intro" id="intro" hidden>
+  <div class="intro-card">
+    <img src="icons/icon-192.png" alt="" width="72" height="72">
+    <h1>Been Here</h1>
+    <p>The world starts covered in fog. Everywhere you go clears it.</p>
+    <ul>
+      <li>Tap Start recording when you head out.</li>
+      <li>Draw old trips with the pencil, or import them in Settings.</li>
+      <li>See how much of each place you have explored in Places and Stats.</li>
+    </ul>
+    <button class="btn primary" id="introGo">Get started</button>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/lib/leaflet.js"></script>
+<script src="js/data/countries.js"></script>
+<script src="js/util.js"></script>
+<script src="js/geo.js"></script>
+<script src="js/store.js"></script>
+<script src="js/fog.js"></script>
+<script src="js/countries.js"></script>
+<script src="js/cities.js"></script>
+<script src="js/areas.js"></script>
+<script src="js/tracker.js"></script>
+<script src="js/importers.js"></script>
+<script src="js/share.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
